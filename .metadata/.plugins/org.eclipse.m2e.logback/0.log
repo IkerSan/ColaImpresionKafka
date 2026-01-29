@@ -1,0 +1,2 @@
+2026-01-29 10:01:04,881 [Worker-5: Loading available Gradle versions] INFO  o.e.b.c.i.u.g.PublishedGradleVersions - Gradle version information cache is not available. Remote download required.
+2026-01-29 10:04:36,804 [Worker-5: Launching mavenrun-9dbd09f9-bac2-4582-aa52-a3d692873bd2] INFO  o.eclipse.m2e.core.internal.Bundles - getClasspathEntries(Bundle=org.eclipse.m2e.maven.runtime_3.9.900.20240824-1409 [300])
