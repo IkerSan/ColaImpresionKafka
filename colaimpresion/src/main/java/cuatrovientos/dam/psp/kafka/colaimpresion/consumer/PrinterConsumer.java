@@ -10,11 +10,9 @@ import java.util.Collections;
 import java.util.Properties;
 import java.util.UUID;
 
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +21,10 @@ import com.google.gson.Gson;
 import cuatrovientos.dam.psp.kafka.colaimpresion.model.PrintPage;
 import cuatrovientos.dam.psp.kafka.colaimpresion.util.KafkaConfig;
 
+/**
+ * Consumidor que simula una impresora física.
+ * Escucha en un topic específico (Color o B/N) e "imprime" los trabajos generado archivos de texto.
+ */
 public class PrinterConsumer implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(PrinterConsumer.class);
     private static final Gson gson = new Gson();
@@ -41,15 +43,10 @@ public class PrinterConsumer implements Runnable {
 
     @Override
     public void run() {
-        Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConfig.BOOTSTRAP_SERVERS);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
-        // Cada impresora es un consumidor dentro del mismo grupo (load balancing)
-        // Kafka por defecto crea 1 partición, así que solo 1 impresora recibiría trabajo si no particionamos.
-        // Asumiremos que el topic se creará con suficientes particiones (ej: 3 para BW, 2 para Color)
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        Properties props = KafkaConfig.getConsumerProps(groupId);
+        // Kafka por defecto crea 1 partición, así que partimos el topic en 3
 
+        // Creamos el consumidor
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
             consumer.subscribe(Collections.singletonList(topic));
             logger.info("Impresora {} iniciada. Escuchando en topic: {}", printerName, topic);
@@ -68,6 +65,7 @@ public class PrinterConsumer implements Runnable {
         }
     }
 
+    // Procesamos la página
     private void processPrintPage(String jsonPage) {
         try {
             PrintPage page = gson.fromJson(jsonPage, PrintPage.class);

@@ -12,6 +12,7 @@ public class BWPrinterApp {
 
         System.out.println("--- Iniciando " + numPrinters + " Impresoras a B/N ---");
 
+        // Creamos un hilo por impresora
         for (int i = 1; i <= numPrinters; i++) {
             PrinterConsumer printer = new PrinterConsumer(
                 KafkaConfig.TOPIC_BW_QUEUE, 

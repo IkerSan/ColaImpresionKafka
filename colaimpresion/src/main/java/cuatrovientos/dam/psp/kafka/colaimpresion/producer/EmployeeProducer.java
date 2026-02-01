@@ -5,9 +5,7 @@ import java.util.Scanner;
 import java.util.UUID;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,16 +14,18 @@ import com.google.gson.Gson;
 import cuatrovientos.dam.psp.kafka.colaimpresion.model.PrintJob;
 import cuatrovientos.dam.psp.kafka.colaimpresion.util.KafkaConfig;
 
+/**
+ * Productor que simula a un empleado enviando documentos.
+ * Permite la entrada interactiva de trabajos de impresión.
+ */
 public class EmployeeProducer {
     private static final Logger logger = LoggerFactory.getLogger(EmployeeProducer.class);
     private static final Gson gson = new Gson();
 
     public static void main(String[] args) {
-        Properties props = new Properties();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConfig.BOOTSTRAP_SERVERS);
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        Properties props = KafkaConfig.getProducerProps();
 
+        // Creamos el productor
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(props);
              Scanner scanner = new Scanner(System.in)) {
 
@@ -56,7 +56,7 @@ public class EmployeeProducer {
                 String jsonJob = gson.toJson(job);
 
                 // Usamos el sender como Key para garantizar orden si fuera necesario, 
-                // o UUID si queremos balanceo puro y duro.
+                // o UUID si queremos balanceo 
                 String key = sender; 
                 
                 ProducerRecord<String, String> record = new ProducerRecord<>(

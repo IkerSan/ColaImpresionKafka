@@ -1,134 +1,98 @@
 # Sistema de Colas de Impresión con Kafka
 
-Este proyecto implementa una simulación de sistema de colas de impresión distribuido utilizando Apache Kafka.
+Simulación de un sistema de impresión distribuido usando Apache Kafka. Los empleados envían trabajos, un procesador central los clasifica y divide, y las impresoras (consumidores) los procesan.
 
-## 🏗 Arquitectura
+## Arquitectura
 
-El sistema consta de los siguientes componentes desacoplados que se comunican a través de Topics de Kafka:
+1.  **EmployeeProducer**: Empleados enviando trabajos (JSON) a `print-jobs-input`.
+2.  **JobProcessor**: Consume trabajos, archiva originales y divide documentos en páginas. Envíando a `print-queue-color` o `print-queue-bw`.
+3.  **PrinterConsumers**: Impresoras consumiendo de las colas de color o B/N.
 
-1.  **EmployeeProducer (Productor)**:
-    - Simula la estación de trabajo de un empleado.
-    - Envía trabajos de impresión en formato JSON al topic `print-jobs-input`.
-    - Format del mensaje: `{ "titulo": "...", "documento": "...", "tipo": "B/N"| "Color", "sender": "..." }`.
+## Requisitos Previos (Iniciar Kafka)
 
-2.  **JobProcessor (Procesador Central)**:
-    - Consume mensajes de `print-jobs-input`.
-    - Realiza dos tareas en paralelo para maximizar eficiencia:
-      1.  **Archivado**: Guarda el JSON original en `storage/originals/{sender}/`.
-      2.  **Procesamiento**: Divide el contenido del documento en páginas de 400 caracteres.
-    - Enruta las páginas generadas a la cola correspondiente: `print-queue-color` o `print-queue-bw`.
+Para facilitar el inicio de Kafka (limpieza, formateo y arranque), hemos creado un script automático.
 
-3.  **PrinterConsumers (Impresoras)**:
-    - Simulan impresoras físicas consumiendo de las colas.
-    - **ColorPrinterApp**: Lanza 2 hilos (impresoras) consumiendo de `print-queue-color`.
-    - **BWPrinterApp**: Lanza 3 hilos (impresoras) consumiendo de `print-queue-bw`.
-    - Los documentos "impresos" se guardan en `storage/prints/color` o `storage/prints/bw`.
-
-### Topics Implementados
-
-- `print-jobs-input`: Entrada de trabajos crudos.
-- `print-queue-color`: Cola de páginas para impresión a color.
-- `print-queue-bw`: Cola de páginas para impresión en blanco y negro.
-
-## 🧠 Funcionamiento del sistema Kafka
-
-El sistema funciona como una oficina de correos automatizada con 3 buzones principales (Topics):
-
-1.  **Entrada (`print-jobs-input`)**: Es el buzón general. Los empleados dejan aquí sus documentos completos sin preocuparse de quién los imprimirá.
-2.  **Clasificación (JobProcessor)**: El procesador recoge los correos de la entrada, hace una fotocopia para el archivo (storage) y recorta el documento en páginas sueltas. Luego, mira cada página y decide: "¿Tiene color? Pues al buzón de Color. ¿No? Al buzón de B/N".
-3.  **Salida (`print-queue-color` y `print-queue-bw`)**: Las impresoras están esperando delante de estos buzones. En cuanto cae una hoja en su buzón correspondiente, la cogen y la "imprimen".
-
-Así logramos que el sistema nunca se atasque: si las impresoras son lentas, los trabajos esperan seguros en los buzones de Kafka.
-
----
-
-## 🚀 Puesta en Marcha (Entorno de Desarrollo)
-
-### Prerrequisitos
-
-- Java 11 o superior.
-- Apache Kafka y Zookeeper instalados y corriendo localmente (puerto 9092).
-- Maven.
-
-### Paso 1: Iniciar Kafka (Windows)
-
-Abre una terminal en tu directorio de Kafka y ejecuta:
-
-1.  **Zookeeper**:
+1.  Abre una terminal de PowerShell en la carpeta del proyecto.
+2.  Ejecuta el script:
     ```powershell
-    .\bin\windows\zookeeper-server-start.bat .\config\zookeeper.properties
+    .\iniciarKafka.ps1
     ```
-2.  **Kafka Server**:
-    ```powershell
-    .\bin\windows\kafka-server-start.bat .\config\server.properties
-    ```
+3.  Espera a que arranque y **no cierres esa ventana**.
 
-### Paso 2: Ejecutar los Componentes
+**Nota**: Este script borra los datos antiguos para asegurar un inicio limpio cada vez.
 
-Es necesario ejecutar los componentes en terminales separadas para ver el funcionamiento en paralelo.
+## Ejecución
 
-1.  **Compilar el proyecto**:
+### Opción A: Terminal (Recomendado)
 
-    ```powershell
-    cd colaimpresion
-    mvn clean package
-    ```
+Abrir 4 terminales en la carpeta del proyecto `colaimpresion`:
 
-2.  **Iniciar Procesador (JobProcessor)**:
-
+1.  **Terminal 1 (Procesador):**
     ```powershell
     mvn exec:java -Dexec.mainClass="cuatrovientos.dam.psp.kafka.colaimpresion.processor.JobProcessor"
     ```
-
-3.  **Iniciar Impresoras Color**:
-
+2.  **Terminal 2 (Impresoras Color):**
     ```powershell
     mvn exec:java -Dexec.mainClass="cuatrovientos.dam.psp.kafka.colaimpresion.consumer.ColorPrinterApp"
     ```
-
-4.  **Iniciar Impresoras B/N**:
-
+3.  **Terminal 3 (Impresoras B/N):**
     ```powershell
     mvn exec:java -Dexec.mainClass="cuatrovientos.dam.psp.kafka.colaimpresion.consumer.BWPrinterApp"
     ```
-
-5.  **Enviar Trabajos (Empleado)**:
+4.  **Terminal 4 (Empleado - Productor):**
     ```powershell
     mvn exec:java -Dexec.mainClass="cuatrovientos.dam.psp.kafka.colaimpresion.producer.EmployeeProducer"
     ```
-    Sigue las instrucciones en pantalla para enviar documentos.
 
----
+### Opción B: Guía Detallada para Eclipse IDE
 
-## 🧹 Reinicio del Sistema y Limpieza
+**Paso 0: Iniciar Kafka (Externo)**
+Eclipse solo ejecuta el código Java. **Kafka debe estar corriendo** en terminales externas antes de empezar (ver sección "Paso 1" arriba).
 
-Para el **Implantador** o **Mantenedor**:
+**Paso 1: Localizar y Arrancar los programas**
+En el **Project Explorer** de Eclipse, navega por `colaimpresion > src/main/java`. Tienes que arrancar estos 4 archivos (haz **Clic Derecho** en cada uno -> **Run As** -> **Java Application**):
 
-### Limpiar Topics (Resetear Colas)
+1.  `...processor.JobProcessor` (El "Cerebro", clasifica los trabajos).
+2.  `...consumer.ColorPrinterApp` (Las impresoras de Color).
+3.  `...consumer.BWPrinterApp` (Las impresoras de B/N).
+4.  `...producer.EmployeeProducer` (El Empleado, desde donde escribes).
 
-Si se desea vaciar las colas de impresión, se pueden borrar y recrear los topics:
+**IMPORTANTE**: Arranca los 4 **uno detrás de otro**. No esperes a que terminen (nunca terminan, están "escuchando").
 
-```powershell
-# Borrar topics
-.\bin\windows\kafka-topics.bat --bootstrap-server localhost:9092 --delete --topic print-jobs-input
-.\bin\windows\kafka-topics.bat --bootstrap-server localhost:9092 --delete --topic print-queue-color
-.\bin\windows\kafka-topics.bat --bootstrap-server localhost:9092 --delete --topic print-queue-bw
-```
+**Paso 2: Gestionar las Consolas (El truco)**
+Al arrancar 4 programas, Eclipse abre 4 consolas, pero se amontonan una encima de otra y solo ves la última.
 
-(Kafka los recreará automáticamente con la configuración por defecto al recibir nuevos mensajes, o se pueden crear manualmente si se requieren particiones específicas).
+1.  Busca la pestaña **Console** (normalmente abajo).
+2.  En la barra de herramientas de la consola, busca el icono de un **pequeño monitor** ("Display Selected Console") junto al botón rojo de Stop.
+3.  Haz clic en la flechita de ese monitor para ver la lista de programas corriendo.
 
-### Limpiar Archivos Generados
+**Paso 3: Realizar la Prueba**
 
-Para reiniciar el estado del almacenamiento local, borrar la carpeta `storage` en el directorio raíz de la ejecución:
+1.  Usa el icono del monitor para cambiar a la consola de **`EmployeeProducer`**.
+2.  **Haz clic dentro del área blanca de la consola** para asegurarte de que puedes escribir.
+3.  Escribe los datos que te pide (Nombre, Título, Contenido, Tipo: Color) y pulsa Enter.
+4.  Vuelve al icono del monitor y cambia a la consola de **`JobProcessor`** o **`ColorPrinterApp`** para ver cómo mágicamente ha llegado y se ha procesado tu mensaje.
 
-```powershell
-Remove-Item -Recurse -Force storage
-```
+## Limpieza
 
----
+Para reiniciar (borrar topics y archivos):
 
-## 📋 Log de Cambios (Commits Realizados)
+- Borrar carpeta `storage`.
 
-1.  **feat(project)**: Inicialización del proyecto Maven, dependencias y modelos.
-2.  **feat(core)**: Implementación del Productor y Procesador con lógica paralela.
-3.  **feat(consumers)**: Implementación de las aplicaciones de impresión (Color y B/N).
+## Troubleshooting
+
+### Error: 'mvn' no se reconoce...
+
+Si recibes este error en la terminal, significa que Maven no está configurado en las variables de entorno de tu sistema (PATH).
+
+**Solución Rápida**: Utiliza la **Opción B: Eclipse IDE**, ya que Eclipse trae su propio Maven integrado y no requiere configuración extra.
+
+### Error: "Shutdown broker because all log dirs... have failed"
+
+Si Kafka se cierra solo con este error, es porque los logs antiguos están corruptos o entran en conflicto.
+
+**Solución:**
+
+1.  Borra la carpeta temporal: Ve al explorador de archivos y borra `C:\tmp\kraft-combined-logs`.
+2.  Vuelve a ejecutar el **Paso A: Formatear el almacenamiento** (generar UUID y formatear).
+3.  Arranca de nuevo con el **Paso B**.

@@ -1,11 +1,15 @@
 package cuatrovientos.dam.psp.kafka.colaimpresion.model;
 
+/**
+ * Modelo de datos que representa una página individual de un documento.
+ * Generado por el JobProcessor y consumido por las impresoras.
+ */
 public class PrintPage {
     private String titulo;
     private int pageNumber;
     private int totalPages;
     private String content; 
-    private String originalSender; // Solo para seguimiento, el requisito dice que el remitente no es relevante para imprimir pero es bueno para depurar
+    private String originalSender; 
 
     public PrintPage() {}
 

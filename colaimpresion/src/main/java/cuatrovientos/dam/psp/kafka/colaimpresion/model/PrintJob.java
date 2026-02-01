@@ -1,9 +1,13 @@
 package cuatrovientos.dam.psp.kafka.colaimpresion.model;
 
+/**
+ * Modelo de datos que representa un trabajo de impresión completo.
+ * Enviado por el productor (Empleado) al topic de entrada.
+ */
 public class PrintJob {
     private String titulo;
     private String documento;
-    private String tipo; // "B/N" or "Color"
+    private String tipo; // Puede ser "B/N" o "Color"
     private String sender;
     
     public PrintJob() {}

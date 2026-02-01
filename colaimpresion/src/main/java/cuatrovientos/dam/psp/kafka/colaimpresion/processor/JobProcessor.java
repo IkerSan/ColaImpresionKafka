@@ -11,7 +11,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,10 +19,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +29,10 @@ import cuatrovientos.dam.psp.kafka.colaimpresion.model.PrintJob;
 import cuatrovientos.dam.psp.kafka.colaimpresion.model.PrintPage;
 import cuatrovientos.dam.psp.kafka.colaimpresion.util.KafkaConfig;
 
+/**
+ * Procesador central del sistema.
+ * Consume trabajos brutos, los archiva y los divide en páginas para distribuir a las colas de impresión.
+ */
 public class JobProcessor {
     private static final Logger logger = LoggerFactory.getLogger(JobProcessor.class);
     private static final Gson gson = new Gson();
@@ -40,19 +40,11 @@ public class JobProcessor {
     private static final ExecutorService executor = Executors.newFixedThreadPool(4);
 
     public static void main(String[] args) {
-        // Configuración del Consumidor
-        Properties consumerProps = new Properties();
-        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConfig.BOOTSTRAP_SERVERS);
-        consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, KafkaConfig.GROUP_ID_PROCESSOR);
-        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        // Configuración
+        Properties consumerProps = KafkaConfig.getConsumerProps(KafkaConfig.GROUP_ID_PROCESSOR);
         consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-        // Configuración del Productor (para reenviar páginas)
-        Properties producerProps = new Properties();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KafkaConfig.BOOTSTRAP_SERVERS);
-        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        Properties producerProps = KafkaConfig.getProducerProps();
 
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps);
              KafkaProducer<String, String> producer = new KafkaProducer<>(producerProps)) {
@@ -66,13 +58,9 @@ public class JobProcessor {
                     String jsonValue = record.value();
                     logger.info("Recibido trabajo: {}", jsonValue);
 
-                    // Paralelismo: Guardar JSON original y Procesar/Dividir
-                    CompletableFuture<Void> saveFuture = CompletableFuture.runAsync(() -> saveOriginalJob(jsonValue), executor);
-                    CompletableFuture<Void> processFuture = CompletableFuture.runAsync(() -> processAndRouteJob(jsonValue, producer), executor);
-
-                    // Esperamos a que ambos terminen para asegurar integridad (opcional, en un sistema real podríamos no bloquear)
-                    // Pero Kafka Consumer no es thread-safe, así que el polling es secuencial.
-                    // Las tareas se lanzan al pool.
+                    // Paralelismo sin bloqueo
+                    executor.submit(() -> saveOriginalJob(jsonValue));
+                    executor.submit(() -> processAndRouteJob(jsonValue, producer));
                 }
             }
         } catch (Exception e) {

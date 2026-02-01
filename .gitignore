@@ -6,3 +6,8 @@ target/
 .project
 bin/
 *.class
+
+storage/
+colaimpresion/storage/
+iniciarKafka.ps1.tmp
+*.log
