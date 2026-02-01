@@ -30,6 +30,16 @@ El sistema consta de los siguientes componentes desacoplados que se comunican a 
 - `print-queue-color`: Cola de páginas para impresión a color.
 - `print-queue-bw`: Cola de páginas para impresión en blanco y negro.
 
+## 🧠 Funcionamiento del sistema Kafka
+
+El sistema funciona como una oficina de correos automatizada con 3 buzones principales (Topics):
+
+1.  **Entrada (`print-jobs-input`)**: Es el buzón general. Los empleados dejan aquí sus documentos completos sin preocuparse de quién los imprimirá.
+2.  **Clasificación (JobProcessor)**: El procesador recoge los correos de la entrada, hace una fotocopia para el archivo (storage) y recorta el documento en páginas sueltas. Luego, mira cada página y decide: "¿Tiene color? Pues al buzón de Color. ¿No? Al buzón de B/N".
+3.  **Salida (`print-queue-color` y `print-queue-bw`)**: Las impresoras están esperando delante de estos buzones. En cuanto cae una hoja en su buzón correspondiente, la cogen y la "imprimen".
+
+Así logramos que el sistema nunca se atasque: si las impresoras son lentas, los trabajos esperan seguros en los buzones de Kafka.
+
 ---
 
 ## 🚀 Puesta en Marcha (Entorno de Desarrollo)
