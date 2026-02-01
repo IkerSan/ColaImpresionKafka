@@ -4,8 +4,8 @@ public class PrintPage {
     private String titulo;
     private int pageNumber;
     private int totalPages;
-    private String content; // Max 400 chars
-    private String originalSender; // Just for tracking, requirement says sender is not relevant for printing but good for debugging
+    private String content; 
+    private String originalSender; // Solo para seguimiento, el requisito dice que el remitente no es relevante para imprimir pero es bueno para depurar
 
     public PrintPage() {}
 
